@@ -22,15 +22,7 @@
 package xh.usbarduino;
 
 import android.app.Activity;
-import android.content.Context;
-import android.hardware.usb.UsbDeviceConnection;
-import android.hardware.usb.UsbManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.os.SystemClock;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -38,19 +30,11 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
-import com.hoho.android.usbserial.driver.UsbSerialProber;
-import com.hoho.android.usbserial.util.SerialInputOutputManager;
-import com.hoho.xh.ArduinoManager;
 import com.hoho.xh.ArduinoManagerHandler;
-import com.hoho.xh.SerialReadBuffer;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Monitors a single {@link UsbSerialPort} instance, showing all data
@@ -85,7 +69,6 @@ public class SerialConsoleActivity extends Activity {
         listView = (ListView) findViewById(R.id.listView);
         listViewAdapter = new ArrayAdapter<String>(SerialConsoleActivity.this, android.R.layout.simple_list_item_1, listViewData);
         listView.setAdapter(listViewAdapter);
-        arduinoManagerHandler = new ArduinoManagerHandler(this);
     }
 
     Button.OnClickListener buttonOnClickListener = new Button.OnClickListener() {
@@ -109,11 +92,15 @@ public class SerialConsoleActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        arduinoManagerHandler.restart();
+        if (arduinoManagerHandler == null) {
+            arduinoManagerHandler = new ArduinoManagerHandler(this);
+        } else if (!arduinoManagerHandler.isRuning()) {
+            arduinoManagerHandler.restart();
+        }
     }
 
     public void updateList(String s) {
-        listViewData.add(0,s);
+        listViewData.add(0, s);
         if (listViewData.size() > listViewMax) {
             listViewData.remove(listViewMax);
         }

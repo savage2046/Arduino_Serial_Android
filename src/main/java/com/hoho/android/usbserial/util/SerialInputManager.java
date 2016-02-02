@@ -35,9 +35,9 @@ import java.nio.ByteBuffer;
  *
  * @author mike wakerly (opensource@hoho.com)
  */
-public class SerialInputOutputManager implements Runnable {
+public class SerialInputManager implements Runnable {
 
-    private static final String TAG = SerialInputOutputManager.class.getSimpleName();
+    private static final String TAG = SerialInputManager.class.getSimpleName();
     private static final boolean DEBUG = true;
 
     private static final int READ_WAIT_MILLIS = 200;
@@ -69,7 +69,7 @@ public class SerialInputOutputManager implements Runnable {
         public void onNewData(byte[] data);
 
         /**
-         * Called when {@link SerialInputOutputManager#run()} aborts due to an
+         * Called when {@link SerialInputManager#run()} aborts due to an
          * error.
          */
         public void onRunError(Exception e);
@@ -78,14 +78,14 @@ public class SerialInputOutputManager implements Runnable {
     /**
      * Creates a new instance with no listener.
      */
-    public SerialInputOutputManager(UsbSerialPort driver) {
+    public SerialInputManager(UsbSerialPort driver) {
         this(driver, null);
     }
 
     /**
      * Creates a new instance with the provided listener.
      */
-    public SerialInputOutputManager(UsbSerialPort driver, Listener listener) {
+    public SerialInputManager(UsbSerialPort driver, Listener listener) {
         mDriver = driver;
         mListener = listener;
     }

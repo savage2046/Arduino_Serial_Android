@@ -216,7 +216,6 @@ public class CdcAcmSerialDriver implements UsbSerialDriver {
 
                 synchronized (mWriteBufferLock) {
                     final byte[] writeBuffer;
-
                     writeLength = Math.min(src.length - offset, mWriteBuffer.length);
                     if (offset == 0) {
                         writeBuffer = src;
@@ -225,9 +224,7 @@ public class CdcAcmSerialDriver implements UsbSerialDriver {
                         System.arraycopy(src, offset, mWriteBuffer, 0, writeLength);
                         writeBuffer = mWriteBuffer;
                     }
-
-                    amtWritten = mConnection.bulkTransfer(mWriteEndpoint, writeBuffer, writeLength,
-                            timeoutMillis);
+                    amtWritten = mConnection.bulkTransfer(mWriteEndpoint, writeBuffer, writeLength,timeoutMillis);
                 }
                 if (amtWritten <= 0) {
                     Log.w(TAG, "Error writing " + writeLength + " bytes at offset " + offset + " length=" + src.length);

@@ -4,7 +4,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.hoho.android.usbserial.util.SerialInputOutputManager;
+import com.hoho.android.usbserial.util.SerialInputManager;
+import com.hoho.android.usbserial.util.SerialOutputManager;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -16,7 +17,7 @@ import xh.usbarduino.SerialConsoleActivity;
 /**
  * Created by pc on 2016/2/1.
  * CdcAcmSerialDriver 237行有修改
- * SerialInputOutputManager 44行有修改
+ * SerialInputOutputManager 改成SerialInputManager+SerialOutputManager
  */
 public class ArduinoManagerHandler extends Handler {
     private static final String TAG = ArduinoManagerHandler.class.getSimpleName();
@@ -28,12 +29,12 @@ public class ArduinoManagerHandler extends Handler {
         arduinoManager = new ArduinoManager(activity.getApplicationContext());
         this.postDelayed(runnable, 1000);//开始查找
     }
-
     //隔5秒查找一次arduino，直达找到为止
     private Runnable runnable = new Runnable() {
         public void run() {
             if (arduinoManager.searchDevice()) {
-                onDeviceStateChange();
+                Log.d(TAG,"找到设备,连接端口");
+                startIoManager();
             } else {
                 ArduinoManagerHandler.this.postDelayed(this, 5000);
             }
@@ -49,15 +50,14 @@ public class ArduinoManagerHandler extends Handler {
                 break;
         }
     }
+    private SerialOutputManager serialOutputManager;
 
     public void write(String s) {
         byte[] bytes = s.getBytes();
-        try {
-            mSerialIoManager.writeAsync(bytes);
-        } catch (Exception e) {
-            Log.w(TAG, "串口发送失败");
-        }
+        serialOutputManager = new SerialOutputManager(arduinoManager.getUsbSerialPort(),bytes);
+        mExecutor.submit(serialOutputManager);//不能用handle.post，会影响主线程，另开线程池运行
     }
+
     public void close(){
         stopIoManager();
         if (arduinoManager.getUsbSerialPort() != null) {
@@ -74,11 +74,11 @@ public class ArduinoManagerHandler extends Handler {
         this.postDelayed(runnable, 1000);//开始查找
     }
 
-    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService mExecutor = Executors.newCachedThreadPool();
 
-    private SerialInputOutputManager mSerialIoManager;
-    private final SerialInputOutputManager.Listener mListener =
-            new SerialInputOutputManager.Listener() {
+    private SerialInputManager mSerialIoManager;
+    private final SerialInputManager.Listener mListener =
+            new SerialInputManager.Listener() {
                 @Override
                 public void onRunError(Exception e) {
                     Log.d(TAG, "Runner stopped.");
@@ -94,11 +94,8 @@ public class ArduinoManagerHandler extends Handler {
             };
 
     private SerialReadBuffer serialReadBuffer = new SerialReadBuffer();
-
-    public void onDeviceStateChange() {
-        serialReadBuffer.clean();
-        stopIoManager();
-        startIoManager();
+    public boolean isRuning(){
+        return mSerialIoManager!=null;
     }
 
     private void stopIoManager() {
@@ -112,7 +109,7 @@ public class ArduinoManagerHandler extends Handler {
     private void startIoManager() {
         if (arduinoManager.getUsbSerialPort() != null) {
             Log.i(TAG, "Starting io manager ..");
-            mSerialIoManager = new SerialInputOutputManager(arduinoManager.getUsbSerialPort(), mListener);
+            mSerialIoManager = new SerialInputManager(arduinoManager.getUsbSerialPort(), mListener);
             mExecutor.submit(mSerialIoManager);//不能用handle.post，会影响主线程，另开线程池运行
         }
     }
