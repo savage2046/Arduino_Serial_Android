@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="send_arduino_data" type="id" />
+    <item name="receive_arduino_data" type="id" />
+
+</resources>
