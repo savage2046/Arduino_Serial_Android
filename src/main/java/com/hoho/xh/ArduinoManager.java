@@ -61,10 +61,20 @@ public class ArduinoManager {
                 usbSerialPort = null;
                 return false;
             }
-            Log.d(TAG, "打开端口");
+            Log.i(TAG, "打开端口");
             return true;
         }
         return false;
+    }
+
+    public void close(){
+        Log.i(TAG, "关闭arduino端口");
+        try {
+            usbSerialPort.close();
+        } catch (IOException e2) {
+            // Ignore.
+        }
+        usbSerialPort = null;
     }
 
     public UsbSerialPort getUsbSerialPort() {

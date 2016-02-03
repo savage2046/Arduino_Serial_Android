@@ -4,9 +4,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.hoho.android.usbserial.util.SerialInputManager;
-import com.hoho.android.usbserial.util.SerialOutputManager;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,10 +24,10 @@ public class ArduinoManagerHandler extends Handler {
     public ArduinoManagerHandler(SerialConsoleActivity activity) {
         this.activity = activity;
         arduinoManager = new ArduinoManager(activity.getApplicationContext());
-        this.postDelayed(runnable, 1000);//开始查找
+        this.postDelayed(runnable, 500);//开始查找
     }
     //隔5秒查找一次arduino，直达找到为止
-    private Runnable runnable = new Runnable() {
+    private Runnable runnable = new Runnable() {//不能做太“重”工作，会阻塞主线程
         public void run() {
             if (arduinoManager.searchDevice()) {
                 Log.d(TAG,"找到设备,连接端口");
@@ -46,7 +43,11 @@ public class ArduinoManagerHandler extends Handler {
         switch (msg.what) {
             case R.id.receive_arduino_data:
                 // Log.w(TAG, "收到信息，正在处理");
-                activity.updateList((String) msg.obj);
+                activity.recieveArduinoData((String) msg.obj);
+                break;
+            case R.id.send_arduino_data_error:
+                Log.w(TAG, "重新连接");
+                restart();
                 break;
         }
     }
@@ -54,24 +55,17 @@ public class ArduinoManagerHandler extends Handler {
 
     public void write(String s) {
         byte[] bytes = s.getBytes();
-        serialOutputManager = new SerialOutputManager(arduinoManager.getUsbSerialPort(),bytes);
+        serialOutputManager = new SerialOutputManager(arduinoManager.getUsbSerialPort(),bytes,this);
         mExecutor.submit(serialOutputManager);//不能用handle.post，会影响主线程，另开线程池运行
     }
 
     public void close(){
         stopIoManager();
-        if (arduinoManager.getUsbSerialPort() != null) {
-            try {
-                arduinoManager.getUsbSerialPort().close();
-            } catch (IOException e) {
-                // Ignore.
-            }
-            arduinoManager.setUsbSerialPort(null);
-        }
+        arduinoManager.close();
     }
     public void restart(){
         close();
-        this.postDelayed(runnable, 1000);//开始查找
+        this.postDelayed(runnable, 500);//开始查找
     }
 
     private final ExecutorService mExecutor = Executors.newCachedThreadPool();

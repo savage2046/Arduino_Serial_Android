@@ -1,5 +1,8 @@
-package com.hoho.android.usbserial.util;
+package com.hoho.xh;
 
+import android.os.Handler;
+import android.os.Message;
+import android.os.SystemClock;
 import android.util.Log;
 
 import com.hoho.android.usbserial.driver.UsbSerialPort;
@@ -7,23 +10,27 @@ import com.hoho.android.usbserial.driver.UsbSerialPort;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import xh.usbarduino.R;
+
 /**
  * Created by pc on 2016/2/2.
  */
 public class SerialOutputManager implements Runnable {
     private static final String TAG = SerialOutputManager.class.getSimpleName();
 
-    private static final boolean DEBUG = true;
+    private final boolean DEBUG = true;
 
-    private static final int WAIT_MILLIS = 200;
+    private final int TIMEOUT_MILLIS = 200;
 
-    private static final int BUFSIZ = 64;//arduino 缓冲长度
+    private final int BUFSIZ = 64;//arduino 缓冲长度
     private final UsbSerialPort mDriver;
+    private final Handler handler;
     // Synchronized by 'mWriteBuffer'
     private final ByteBuffer mWriteBuffer = ByteBuffer.allocate(BUFSIZ);
 
-    public SerialOutputManager(UsbSerialPort driver,byte[] data) {
+    public SerialOutputManager(UsbSerialPort driver,byte[] data,Handler handler) {
         mDriver = driver;
+        this.handler=handler;
         write(data);
     }
     public void write(byte[] data) {
@@ -49,11 +56,21 @@ public class SerialOutputManager implements Runnable {
             if (DEBUG) {
                 Log.d(TAG, "Writing data len=" + len);
             }
-            try{
-                mDriver.write(outBuff, WAIT_MILLIS);
-            }catch (IOException e){
-                Log.w(TAG, "Writing end,Run ending due to exception: " + e.getMessage(), e);
+            if(writeAct(outBuff)<0){//出错，尝试第二次
+                SystemClock.sleep(100);
+                if(writeAct(outBuff)<0){
+                    Log.w(TAG,"Writing unknow error");
+                    handler.sendEmptyMessage(R.id.send_arduino_data_error);
+                }
             }
         }
+    }
+    private int writeAct(byte[] outBuff){
+        try{
+            return mDriver.write(outBuff, TIMEOUT_MILLIS);
+        }catch (IOException e){
+            Log.w(TAG, "Writing end,Run ending due to exception: " + e.getMessage(), e);
+        }
+        return -1;
     }
 }

@@ -19,7 +19,7 @@
  * Project home page: https://github.com/mik3y/usb-serial-for-android
  */
 
-package com.hoho.android.usbserial.util;
+package com.hoho.xh;
 
 import android.hardware.usb.UsbRequest;
 import android.util.Log;
@@ -47,15 +47,11 @@ public class SerialInputManager implements Runnable {
 
     private final ByteBuffer mReadBuffer = ByteBuffer.allocate(BUFSIZ);
 
-    // Synchronized by 'mWriteBuffer'
-    private final ByteBuffer mWriteBuffer = ByteBuffer.allocate(BUFSIZ);
-
     private enum State {
         STOPPED,
         RUNNING,
         STOPPING
     }
-
     // Synchronized by 'this'
     private State mState = State.STOPPED;
 
@@ -96,12 +92,6 @@ public class SerialInputManager implements Runnable {
 
     public synchronized Listener getListener() {
         return mListener;
-    }
-
-    public void writeAsync(byte[] data) {
-        synchronized (mWriteBuffer) {
-            mWriteBuffer.put(data);
-        }
     }
 
     public synchronized void stop() {
@@ -166,24 +156,6 @@ public class SerialInputManager implements Runnable {
                 listener.onNewData(data);
             }
             mReadBuffer.clear();
-        }
-
-        // Handle outgoing data.
-        byte[] outBuff = null;
-        synchronized (mWriteBuffer) {
-            len = mWriteBuffer.position();
-            if (len > 0) {
-                outBuff = new byte[len];
-                mWriteBuffer.rewind();
-                mWriteBuffer.get(outBuff, 0, len);
-                mWriteBuffer.clear();
-            }
-        }
-        if (outBuff != null) {
-            if (DEBUG) {
-                Log.d(TAG, "Writing data len=" + len);
-            }
-            mDriver.write(outBuff, READ_WAIT_MILLIS);
         }
     }
 

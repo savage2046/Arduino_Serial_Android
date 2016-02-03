@@ -99,7 +99,7 @@ public class SerialConsoleActivity extends Activity {
         }
     }
 
-    public void updateList(String s) {
+    public void recieveArduinoData(String s) {
         listViewData.add(0, s);
         if (listViewData.size() > listViewMax) {
             listViewData.remove(listViewMax);
