@@ -1,7 +1,6 @@
 package com.hoho.xh;
 
 import android.os.Handler;
-import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -11,6 +10,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import xh.usbarduino.R;
+
 
 /**
  * Created by pc on 2016/2/2.

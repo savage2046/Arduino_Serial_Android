@@ -31,6 +31,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.xh.ArduinoManager;
 import com.hoho.xh.ArduinoManagerHandler;
 
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class SerialConsoleActivity extends Activity {
     private List<String> listViewData = new ArrayList<String>();
     private ArrayAdapter<String> listViewAdapter;
 
-    private ArduinoManagerHandler arduinoManagerHandler;
+    private ArduinoManager arduinoManager;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -76,30 +77,29 @@ public class SerialConsoleActivity extends Activity {
         public void onClick(View v) {
             String s = editText.getText().toString();
             if (s.isEmpty()) {
+                arduinoManager.write(ArduinoManager.Command.READ_DISTANCE.value());
                 return;
             }
-            arduinoManagerHandler.write(s);
+            arduinoManager.write(s);
         }
     };
 
     @Override
     protected void onPause() {
         super.onPause();
-        arduinoManagerHandler.close();
+        arduinoManager.close();
         finish();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (arduinoManagerHandler == null) {
-            arduinoManagerHandler = new ArduinoManagerHandler(this);
-        } else if (!arduinoManagerHandler.isRuning()) {
-            arduinoManagerHandler.restart();
+        if (arduinoManager == null) {
+            arduinoManager = new ArduinoManager(this);
         }
     }
 
-    public void recieveArduinoData(String s) {
+    public void receiveArduinoData(String s) {
         listViewData.add(0, s);
         if (listViewData.size() > listViewMax) {
             listViewData.remove(listViewMax);

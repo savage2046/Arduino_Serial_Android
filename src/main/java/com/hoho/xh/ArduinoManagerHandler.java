@@ -4,12 +4,13 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import java.io.IOException;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import xh.usbarduino.R;
-import xh.usbarduino.SerialConsoleActivity;
+
 
 /**
  * Created by pc on 2016/2/1.
@@ -19,31 +20,41 @@ import xh.usbarduino.SerialConsoleActivity;
 public class ArduinoManagerHandler extends Handler {
     private static final String TAG = ArduinoManagerHandler.class.getSimpleName();
     private ArduinoManager arduinoManager;
-    private SerialConsoleActivity activity;
+    private int searchCount = 0;
+    private final int searchCountMax = 5;
 
-    public ArduinoManagerHandler(SerialConsoleActivity activity) {
-        this.activity = activity;
-        arduinoManager = new ArduinoManager(activity.getApplicationContext());
+    public ArduinoManagerHandler(ArduinoManager manager) {
+        arduinoManager=manager;
         this.postDelayed(runnable, 500);//开始查找
     }
+
     //隔5秒查找一次arduino，直达找到为止
     private Runnable runnable = new Runnable() {//不能做太“重”工作，会阻塞主线程
         public void run() {
             if (arduinoManager.searchDevice()) {
-                Log.d(TAG,"找到设备,连接端口");
+                Log.d(TAG, "找到设备,连接端口");
+                searchCount = 0;
                 startIoManager();
             } else {
+                searchCount++;
+                if (searchCount > searchCountMax) {
+                    Log.w(TAG, "未能发现设备，停止查找");
+                    return;
+                }
                 ArduinoManagerHandler.this.postDelayed(this, 5000);
             }
         }
     };
+    public void stopSearch(){
+        searchCount = searchCountMax;
+    }
 
     @Override
     public void handleMessage(Message msg) {
         switch (msg.what) {
             case R.id.receive_arduino_data:
                 // Log.w(TAG, "收到信息，正在处理");
-                activity.recieveArduinoData((String) msg.obj);
+                arduinoManager.receiveData((String) msg.obj);
                 break;
             case R.id.send_arduino_data_error:
                 Log.w(TAG, "重新连接");
@@ -51,20 +62,23 @@ public class ArduinoManagerHandler extends Handler {
                 break;
         }
     }
+
     private SerialOutputManager serialOutputManager;
 
     public void write(String s) {
         byte[] bytes = s.getBytes();
-        serialOutputManager = new SerialOutputManager(arduinoManager.getUsbSerialPort(),bytes,this);
+        UsbSerialPort port=arduinoManager.getUsbSerialPort();
+        if(port==null){
+            Log.i(TAG,"还未连接arduino,不能发送");
+            return;
+        }
+        serialOutputManager = new SerialOutputManager(port, bytes, this);
         mExecutor.submit(serialOutputManager);//不能用handle.post，会影响主线程，另开线程池运行
     }
 
-    public void close(){
+    public void restart() {
         stopIoManager();
         arduinoManager.close();
-    }
-    public void restart(){
-        close();
         this.postDelayed(runnable, 500);//开始查找
     }
 
@@ -88,8 +102,9 @@ public class ArduinoManagerHandler extends Handler {
             };
 
     private SerialReadBuffer serialReadBuffer = new SerialReadBuffer();
-    public boolean isRuning(){
-        return mSerialIoManager!=null;
+
+    public boolean isRuning() {
+        return mSerialIoManager != null;
     }
 
     private void stopIoManager() {
