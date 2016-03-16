@@ -22,13 +22,12 @@ public class ArduinoManagerHandler extends Handler {
     private ArduinoManager arduinoManager;
     private int searchCount = 0;
     private final int searchCountMax = 5;
-
     public ArduinoManagerHandler(ArduinoManager manager) {
         arduinoManager=manager;
         this.postDelayed(runnable, 500);//开始查找
     }
 
-    //隔5秒查找一次arduino，直达找到为止
+    //隔5秒查找一次arduino
     private Runnable runnable = new Runnable() {//不能做太“重”工作，会阻塞主线程
         public void run() {
             if (arduinoManager.searchDevice()) {
@@ -63,8 +62,7 @@ public class ArduinoManagerHandler extends Handler {
         }
     }
 
-    private SerialOutputManager serialOutputManager;
-
+    private SerialOutputManager serialOutputManager=new SerialOutputManager(this);
     public void write(String s) {
         byte[] bytes = s.getBytes();
         UsbSerialPort port=arduinoManager.getUsbSerialPort();
@@ -72,7 +70,8 @@ public class ArduinoManagerHandler extends Handler {
             Log.i(TAG,"还未连接arduino,不能发送");
             return;
         }
-        serialOutputManager = new SerialOutputManager(port, bytes, this);
+        serialOutputManager.setPort(port);
+        serialOutputManager.setData(bytes);
         mExecutor.submit(serialOutputManager);//不能用handle.post，会影响主线程，另开线程池运行
     }
 
@@ -84,7 +83,7 @@ public class ArduinoManagerHandler extends Handler {
 
     private final ExecutorService mExecutor = Executors.newCachedThreadPool();
 
-    private SerialInputManager mSerialIoManager;
+    private SerialInputManager  serialInputManager;
     private final SerialInputManager.Listener mListener =
             new SerialInputManager.Listener() {
                 @Override
@@ -95,8 +94,12 @@ public class ArduinoManagerHandler extends Handler {
                 @Override
                 public void onNewData(final byte[] data) {
                     serialReadBuffer.append(data);
-                    if (serialReadBuffer.size() > 0) {
-                        Message.obtain(ArduinoManagerHandler.this, R.id.receive_arduino_data, serialReadBuffer.read()).sendToTarget();
+                    StringBuffer stringBuffer=new StringBuffer();
+                    while (serialReadBuffer.size() > 0) {
+                        stringBuffer.append(serialReadBuffer.read());
+                    }
+                    if(stringBuffer.length()>0){
+                        Message.obtain(ArduinoManagerHandler.this, R.id.receive_arduino_data,stringBuffer.toString()).sendToTarget();
                     }
                 }
             };
@@ -104,22 +107,22 @@ public class ArduinoManagerHandler extends Handler {
     private SerialReadBuffer serialReadBuffer = new SerialReadBuffer();
 
     public boolean isRuning() {
-        return mSerialIoManager != null;
+        return  serialInputManager != null;
     }
 
     private void stopIoManager() {
-        if (mSerialIoManager != null) {
+        if ( serialInputManager != null) {
             Log.i(TAG, "Stopping io manager ..");
-            mSerialIoManager.stop();
-            mSerialIoManager = null;
+             serialInputManager.stop();
+             serialInputManager = null;
         }
     }
 
     private void startIoManager() {
         if (arduinoManager.getUsbSerialPort() != null) {
             Log.i(TAG, "Starting io manager ..");
-            mSerialIoManager = new SerialInputManager(arduinoManager.getUsbSerialPort(), mListener);
-            mExecutor.submit(mSerialIoManager);//不能用handle.post，会影响主线程，另开线程池运行
+             serialInputManager = new SerialInputManager(arduinoManager.getUsbSerialPort(), mListener);
+            mExecutor.submit( serialInputManager);//不能用handle.post，会影响主线程，另开线程池运行
         }
     }
 }

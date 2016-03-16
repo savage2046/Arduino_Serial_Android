@@ -23,21 +23,25 @@ public class SerialOutputManager implements Runnable {
     private final int TIMEOUT_MILLIS = 200;
 
     private final int BUFSIZ = 64;//arduino 缓冲长度
-    private final UsbSerialPort mDriver;
+    private UsbSerialPort mDriver;
     private final Handler handler;
+
     // Synchronized by 'mWriteBuffer'
     private final ByteBuffer mWriteBuffer = ByteBuffer.allocate(BUFSIZ);
 
-    public SerialOutputManager(UsbSerialPort driver,byte[] data,Handler handler) {
-        mDriver = driver;
-        this.handler=handler;
-        write(data);
+    public SerialOutputManager(Handler handler) {
+        this.handler = handler;
     }
-    public void write(byte[] data) {
+    public void setPort(UsbSerialPort port) {
+        this.mDriver = port;
+    }
+
+    public void setData(byte[] data) {
         synchronized (mWriteBuffer) {
             mWriteBuffer.put(data);
         }
     }
+
     @Override
     public void run() {
         int len;
@@ -56,19 +60,20 @@ public class SerialOutputManager implements Runnable {
             if (DEBUG) {
                 Log.d(TAG, "Writing data len=" + len);
             }
-            if(writeAct(outBuff)<0){//出错，尝试第二次
+            if (writeAct(outBuff) < 0) {//出错，尝试第二次
                 SystemClock.sleep(100);
-                if(writeAct(outBuff)<0){
-                    Log.w(TAG,"Writing unknow error");
+                if (writeAct(outBuff) < 0) {
+                    Log.w(TAG, "Writing unknow error");
                     handler.sendEmptyMessage(R.id.send_arduino_data_error);
                 }
             }
         }
     }
-    private int writeAct(byte[] outBuff){
-        try{
+
+    private int writeAct(byte[] outBuff) {
+        try {
             return mDriver.write(outBuff, TIMEOUT_MILLIS);
-        }catch (IOException e){
+        } catch (IOException e) {
             Log.w(TAG, "Writing end,Run ending due to exception: " + e.getMessage(), e);
         }
         return -1;
