@@ -1,5 +1,6 @@
 package com.hoho.xh;
 
+import android.hardware.usb.UsbDevice;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -18,111 +19,35 @@ import xh.usbarduino.R;
  * SerialInputOutputManager 改成SerialInputManager+SerialOutputManager
  */
 public class ArduinoManagerHandler extends Handler {
-    private static final String TAG = ArduinoManagerHandler.class.getSimpleName();
+    private static final String TAG = "ArduinoManagerHandler";
     private ArduinoManager arduinoManager;
     private int searchCount = 0;
-    private final int searchCountMax = 5;
+
     public ArduinoManagerHandler(ArduinoManager manager) {
-        arduinoManager=manager;
-        this.postDelayed(runnable, 500);//开始查找
+        arduinoManager = manager;
     }
 
-    //隔5秒查找一次arduino
-    private Runnable runnable = new Runnable() {//不能做太“重”工作，会阻塞主线程
-        public void run() {
-            if (arduinoManager.searchDevice()) {
-                Log.d(TAG, "找到设备,连接端口");
-                searchCount = 0;
-                startIoManager();
-            } else {
-                searchCount++;
-                if (searchCount > searchCountMax) {
-                    Log.w(TAG, "未能发现设备，停止查找");
-                    return;
-                }
-                ArduinoManagerHandler.this.postDelayed(this, 5000);
-            }
-        }
-    };
-    public void stopSearch(){
-        searchCount = searchCountMax;
-    }
 
     @Override
     public void handleMessage(Message msg) {
         switch (msg.what) {
-            case R.id.receive_arduino_data:
-                // Log.w(TAG, "收到信息，正在处理");
+            case R.id.arduino_receive_data:
                 arduinoManager.receiveData((String) msg.obj);
                 break;
-            case R.id.send_arduino_data_error:
+            case R.id.arduino_send_data_error:
                 Log.w(TAG, "重新连接");
-                restart();
+                arduinoManager.restart();
                 break;
-        }
-    }
-
-    private SerialOutputManager serialOutputManager=new SerialOutputManager(this);
-    public void write(String s) {
-        byte[] bytes = s.getBytes();
-        UsbSerialPort port=arduinoManager.getUsbSerialPort();
-        if(port==null){
-            Log.i(TAG,"还未连接arduino,不能发送");
-            return;
-        }
-        serialOutputManager.setPort(port);
-        serialOutputManager.setData(bytes);
-        mExecutor.submit(serialOutputManager);//不能用handle.post，会影响主线程，另开线程池运行
-    }
-
-    public void restart() {
-        stopIoManager();
-        arduinoManager.close();
-        this.postDelayed(runnable, 500);//开始查找
-    }
-
-    private final ExecutorService mExecutor = Executors.newCachedThreadPool();
-
-    private SerialInputManager  serialInputManager;
-    private final SerialInputManager.Listener mListener =
-            new SerialInputManager.Listener() {
-                @Override
-                public void onRunError(Exception e) {
-                    Log.d(TAG, "Runner stopped.");
+            case R.id.arduino_search_device:
+                searchCount++;
+                Log.d(TAG, "search device,count=" + searchCount);
+                UsbDevice device = arduinoManager.searchDevice();
+                if (device != null) {
+                    arduinoManager.getUsbPermission(device);
+                } else {
+                    this.sendEmptyMessageDelayed(R.id.arduino_search_device, 3000);
                 }
-
-                @Override
-                public void onNewData(final byte[] data) {
-                    serialReadBuffer.append(data);
-                    StringBuffer stringBuffer=new StringBuffer();
-                    while (serialReadBuffer.size() > 0) {
-                        stringBuffer.append(serialReadBuffer.read());
-                    }
-                    if(stringBuffer.length()>0){
-                        Message.obtain(ArduinoManagerHandler.this, R.id.receive_arduino_data,stringBuffer.toString()).sendToTarget();
-                    }
-                }
-            };
-
-    private SerialReadBuffer serialReadBuffer = new SerialReadBuffer();
-
-    public boolean isRuning() {
-        return  serialInputManager != null;
-    }
-
-    private void stopIoManager() {
-        if ( serialInputManager != null) {
-            Log.i(TAG, "Stopping io manager ..");
-             serialInputManager.stop();
-             serialInputManager = null;
-        }
-    }
-
-    private void startIoManager() {
-        if (arduinoManager.getUsbSerialPort() != null) {
-            Log.i(TAG, "Starting io manager ..");
-             serialInputManager = new SerialInputManager(arduinoManager.getUsbSerialPort(), mListener);
-            mExecutor.submit( serialInputManager);//不能用handle.post，会影响主线程，另开线程池运行
+                break;
         }
     }
 }

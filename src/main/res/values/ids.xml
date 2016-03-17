@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item name="send_arduino_data" type="id" />
-    <item name="send_arduino_data_error" type="id" />
-    <item name="receive_arduino_data" type="id" />
+    <item name="arduino_send_data" type="id" />
+    <item name="arduino_send_data_error" type="id" />
+    <item name="arduino_receive_data" type="id" />
+    <item name="arduino_search_device" type="id" />
 </resources>

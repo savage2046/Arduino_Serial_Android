@@ -64,7 +64,7 @@ public class SerialOutputManager implements Runnable {
                 SystemClock.sleep(100);
                 if (writeAct(outBuff) < 0) {
                     Log.w(TAG, "Writing unknow error");
-                    handler.sendEmptyMessage(R.id.send_arduino_data_error);
+                    handler.sendEmptyMessage(R.id.arduino_send_data_error);
                 }
             }
         }
