@@ -34,7 +34,7 @@ public class ArduinoManager {
     private final UsbManager usbManager;
 
     public enum Command {
-        READ_DISTANCE("read distance");
+        READ_DISTANCE("read distance;");
         private String string;
 
         Command(String s) {
@@ -118,6 +118,7 @@ public class ArduinoManager {
     public void close() {
         Log.d(TAG, "关闭arduino端口");
         handler.removeMessages(R.id.arduino_search_device);//停止查找
+        stopIoManager();
         if (usbSerialPort != null) {
             try {
                 usbSerialPort.close();
@@ -126,7 +127,6 @@ public class ArduinoManager {
             }
         }
         usbSerialPort = null;
-        stopIoManager();
     }
 
     public void restart() {

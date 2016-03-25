@@ -27,7 +27,6 @@ public class ArduinoManagerHandler extends Handler {
         arduinoManager = manager;
     }
 
-
     @Override
     public void handleMessage(Message msg) {
         switch (msg.what) {
