@@ -2,10 +2,17 @@
 
 rewrite hoho example, easy to use
 
+////////////////////////////////////
+
 注意：手机供电给arduino！！
+
 本程序使用USB HOST模式不能一边工作一边充电！！
+
 如果需要充电，需要用到ACCESSORY模式，要在arduino加装USB HOST SHIELD
+
 版主正在研究ADK，有结果了会放出来的
+
+///////////////////////////////
 
 安卓连接arduino
 基于HOHO的库
